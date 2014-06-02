@@ -99,6 +99,20 @@ module Integrity
         end
       end
     end
+
+    def query_parse(query_string)
+      queries = query_string.split("&")
+      if queries.any?
+        queries.inject({}) do |hash, string|
+          key, value = string.split("=")
+          hash[key.to_sym] = value
+          hash
+        end
+      else
+        {}
+      end
+    end
+
     private :load_projects
 
     get "/login" do
@@ -204,6 +218,25 @@ module Integrity
       show :new, :title => ["projects", current_project.permalink, "edit"]
     end
 
+    get "/:project/builds" do
+      login_required
+
+      query = request.query_string
+
+      query_hash = query_parse(query)
+      commit = query_hash[:commit]
+      count = query_hash[:n]
+      commit_match = current_project.builds.commits.flat_map(&:identifier).uniq.detect{|x|x.match(/#{commit}/)}
+
+      if commit_match
+        builds = current_project.builds.all("commit.identifier" => commit_match)
+        builds = builds.first(count.to_i) if count
+        [builds].flatten.map(&:to_json).join
+      else
+        "Uh-oh, no builds found by commit '#{commit}'"
+      end
+    end
+
     post "/:project/builds" do
       login_required
 
@@ -236,7 +269,7 @@ module Integrity
     get "/:project/builds/:build\.json" do
       @format = :json
       login_required unless current_project.public?
-      
+
       json current_build
     end
 
