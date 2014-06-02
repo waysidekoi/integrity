@@ -218,7 +218,7 @@ module Integrity
       show :new, :title => ["projects", current_project.permalink, "edit"]
     end
 
-    get "/:project/builds" do
+    get "/:project/builds.json" do
       login_required
 
       query = request.query_string
